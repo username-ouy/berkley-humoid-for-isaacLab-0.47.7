@@ -1,0 +1,163 @@
+--- git status ---
+On branch main
+Your branch is up to date with 'origin/main'.
+
+Changes not staged for commit:
+  (use "git add <file>..." to update what will be committed)
+  (use "git restore <file>..." to discard changes in working directory)
+	modified:   URDF+USD/SimpleSkyentificPocLegs/skyentific_poclegs/scripts/rsl_rl/play.py
+	modified:   URDF+USD/SimpleSkyentificPocLegs/skyentific_poclegs/scripts/rsl_rl/train.py
+	modified:   skyentific_poclegs/setup.py
+	modified:   skyentific_poclegs/skyentific_poclegs/tasks/locomotion/velocity/mdp/curriculums.py
+
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+	URDF+USD/SimpleSkyentificPocLegs/skyentific_poclegs/logs/
+	URDF+USD/SimpleSkyentificPocLegs/skyentific_poclegs/outputs/
+	URDF+USD/SimpleSkyentificPocLegs/skyentific_poclegs/scripts/rsl_rl/__pycache__/
+	run_train.sh
+	skyentific_poclegs/skyentific_poclegs.egg-info/
+	skyentific_poclegs/skyentific_poclegs/__pycache__/
+	skyentific_poclegs/skyentific_poclegs/assets/__pycache__/
+	skyentific_poclegs/skyentific_poclegs/tasks/__pycache__/
+	skyentific_poclegs/skyentific_poclegs/tasks/locomotion/__pycache__/
+	skyentific_poclegs/skyentific_poclegs/tasks/locomotion/velocity/__pycache__/
+	skyentific_poclegs/skyentific_poclegs/tasks/locomotion/velocity/config/__pycache__/
+	skyentific_poclegs/skyentific_poclegs/tasks/locomotion/velocity/config/skyentific_poclegs/__pycache__/__init__.cpython-311.pyc
+	skyentific_poclegs/skyentific_poclegs/tasks/locomotion/velocity/config/skyentific_poclegs/__pycache__/rough_env_cfg.cpython-311.pyc
+	skyentific_poclegs/skyentific_poclegs/tasks/locomotion/velocity/config/skyentific_poclegs/agents/__pycache__/__init__.cpython-311.pyc
+	skyentific_poclegs/skyentific_poclegs/tasks/locomotion/velocity/config/skyentific_poclegs/agents/__pycache__/rsl_rl_cfg.cpython-311.pyc
+	skyentific_poclegs/skyentific_poclegs/tasks/locomotion/velocity/mdp/__pycache__/
+
+no changes added to commit (use "git add" and/or "git commit -a") 
+
+
+--- git diff ---
+diff --git a/URDF+USD/SimpleSkyentificPocLegs/skyentific_poclegs/scripts/rsl_rl/play.py b/URDF+USD/SimpleSkyentificPocLegs/skyentific_poclegs/scripts/rsl_rl/play.py
+index d0a2bf1..67fa023 100644
+--- a/URDF+USD/SimpleSkyentificPocLegs/skyentific_poclegs/scripts/rsl_rl/play.py
++++ b/URDF+USD/SimpleSkyentificPocLegs/skyentific_poclegs/scripts/rsl_rl/play.py
+@@ -114,20 +114,27 @@ def main():
+ 
+     # obtain the trained policy for inference
+     policy = ppo_runner.get_inference_policy(device=env.unwrapped.device)
+-
++    
++    policy_nn = ppo_runner.alg.policy
++    if hasattr(policy_nn, "actor_obs_normalizer"):
++        normalizer = policy_nn.actor_obs_normalizer
++    elif hasattr(policy_nn, "student_obs_normalizer"):
++        normalizer = policy_nn.student_obs_normalizer
++    else:
++        normalizer = None
+     # export policy to onnx/jit
+     export_model_dir = os.path.join(os.path.dirname(resume_path), "exported")
+     export_policy_as_jit(
+-        ppo_runner.alg.actor_critic, ppo_runner.obs_normalizer, path=export_model_dir, filename="policy.pt"
++        ppo_runner.alg.policy, normalizer, path=export_model_dir, filename="policy.pt"
+     )
+     export_policy_as_onnx(
+-        ppo_runner.alg.actor_critic, normalizer=ppo_runner.obs_normalizer, path=export_model_dir, filename="policy.onnx"
++        ppo_runner.alg.policy, normalizer=normalizer, path=export_model_dir, filename="policy.onnx"
+     )
+ 
+     dt = env.unwrapped.physics_dt
+ 
+     # reset environment
+-    obs, _ = env.get_observations()
++    obs = env.get_observations()
+     timestep = 0
+     # simulate environment
+     while simulation_app.is_running():
+diff --git a/URDF+USD/SimpleSkyentificPocLegs/skyentific_poclegs/scripts/rsl_rl/train.py b/URDF+USD/SimpleSkyentificPocLegs/skyentific_poclegs/scripts/rsl_rl/train.py
+index a60b86b..c6a3425 100644
+--- a/URDF+USD/SimpleSkyentificPocLegs/skyentific_poclegs/scripts/rsl_rl/train.py
++++ b/URDF+USD/SimpleSkyentificPocLegs/skyentific_poclegs/scripts/rsl_rl/train.py
+@@ -60,7 +60,7 @@ from isaaclab.envs import (
+     multi_agent_to_single_agent,
+ )
+ from isaaclab.utils.dict import print_dict
+-from isaaclab.utils.io import dump_pickle, dump_yaml
++from isaaclab.utils.io import dump_yaml #dump_pickle,
+ 
+ import skyentific_poclegs.tasks  # noqa: F401
+ from isaaclab_tasks.utils import get_checkpoint_path
+@@ -138,8 +138,8 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
+     # dump the configuration into log-directory
+     dump_yaml(os.path.join(log_dir, "params", "env.yaml"), env_cfg)
+     dump_yaml(os.path.join(log_dir, "params", "agent.yaml"), agent_cfg)
+-    dump_pickle(os.path.join(log_dir, "params", "env.pkl"), env_cfg)
+-    dump_pickle(os.path.join(log_dir, "params", "agent.pkl"), agent_cfg)
++    # dump_pickle(os.path.join(log_dir, "params", "env.pkl"), env_cfg)
++    # dump_pickle(os.path.join(log_dir, "params", "agent.pkl"), agent_cfg)
+ 
+     # run training
+     runner.learn(num_learning_iterations=agent_cfg.max_iterations, init_at_random_ep_len=True)
+diff --git a/skyentific_poclegs/setup.py b/skyentific_poclegs/setup.py
+index 2256ea3..8002b2f 100644
+--- a/skyentific_poclegs/setup.py
++++ b/skyentific_poclegs/setup.py
+@@ -19,16 +19,16 @@ EXTENSION_TOML_DATA = toml.load(os.path.join(EXTENSION_PATH, "config", "extensio
+ INSTALL_REQUIRES = [
+     # generic
+     "numpy",
+-    "torch==2.5.1",
+-    "torchvision>=0.14.1",  # ensure compatibility with torch 1.13.1
++    "torch==2.7.0",
++    "torchvision>=0.22.0",  # ensure compatibility with torch 1.13.1
+     # 5.26.0 introduced a breaking change, so we restricted it for now.
+     # See issue https://github.com/tensorflow/tensorboard/issues/6808 for details.
+-    "protobuf>=3.20.2, < 5.0.0",
++    "protobuf>=3.20.2", #, < 5.0.0
+     # basic logger
+     "tensorboard",
+ ]
+ 
+-PYTORCH_INDEX_URL = ["https://download.pytorch.org/whl/cu118"]
++PYTORCH_INDEX_URL = ["https://download.pytorch.org/whl/cu128"]
+ 
+ # Installation operation
+ setup(
+@@ -40,14 +40,14 @@ setup(
+     description=EXTENSION_TOML_DATA["package"]["description"],
+     keywords=EXTENSION_TOML_DATA["package"]["keywords"],
+     include_package_data=True,
+-    python_requires=">=3.10",
++    python_requires=">=3.11",
+     install_requires=INSTALL_REQUIRES,
+     dependency_links=PYTORCH_INDEX_URL,
+     packages=["skyentific_poclegs"],
+     classifiers=[
+         "Natural Language :: English",
+-        "Programming Language :: Python :: 3.10",
+-        "Isaac Sim :: 4.5.0",
++        "Programming Language :: Python :: 3.11",
++        "Isaac Sim :: 5.1.0",
+     ],
+     zip_safe=False,
+ )
+diff --git a/skyentific_poclegs/skyentific_poclegs/tasks/locomotion/velocity/mdp/curriculums.py b/skyentific_poclegs/skyentific_poclegs/tasks/locomotion/velocity/mdp/curriculums.py
+index 7eb20da..f1c9ddd 100644
+--- a/skyentific_poclegs/skyentific_poclegs/tasks/locomotion/velocity/mdp/curriculums.py
++++ b/skyentific_poclegs/skyentific_poclegs/tasks/locomotion/velocity/mdp/curriculums.py
+@@ -101,8 +101,9 @@ def modify_push_force(
+         return curr_setting
+     if env.common_step_counter % interval == 0:
+ 
+-        
+-        if torch.sum(env.termination_manager._term_dones["base_contact"]) < torch.sum(env.termination_manager._term_dones["time_out"]) * 2:
++        print("base_contact", env.termination_manager._term_dones.shape)
++        print("time_out", env.termination_manager._term_dones.shape)
++        if torch.sum(env.termination_manager._term_dones[:,1]) < torch.sum(env.termination_manager._term_dones[:, 0]) * 2:
+             # obtain term settings
+             term_cfg = env.event_manager.get_term_cfg('push_robot')
+             # update term settings
+@@ -115,7 +116,7 @@ def modify_push_force(
+             env.event_manager.set_term_cfg('push_robot', term_cfg)
+         
+ 
+-        if torch.sum(env.termination_manager._term_dones["base_contact"]) > torch.sum(env.termination_manager._term_dones["time_out"]) / 2:
++        if torch.sum(env.termination_manager._term_dones[:,1]) > torch.sum(env.termination_manager._term_dones[:, 0]) * 2:
+             # obtain term settings
+             term_cfg = env.event_manager.get_term_cfg('push_robot')
+             # update term settings

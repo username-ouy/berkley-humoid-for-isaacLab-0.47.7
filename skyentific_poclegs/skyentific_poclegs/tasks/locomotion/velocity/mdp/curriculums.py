@@ -101,8 +101,9 @@ def modify_push_force(
         return curr_setting
     if env.common_step_counter % interval == 0:
 
-        
-        if torch.sum(env.termination_manager._term_dones["base_contact"]) < torch.sum(env.termination_manager._term_dones["time_out"]) * 2:
+        print("base_contact", env.termination_manager._term_dones.shape)
+        print("time_out", env.termination_manager._term_dones.shape)
+        if torch.sum(env.termination_manager._term_dones[:,1]) < torch.sum(env.termination_manager._term_dones[:, 0]) * 2:
             # obtain term settings
             term_cfg = env.event_manager.get_term_cfg('push_robot')
             # update term settings
@@ -115,7 +116,7 @@ def modify_push_force(
             env.event_manager.set_term_cfg('push_robot', term_cfg)
         
 
-        if torch.sum(env.termination_manager._term_dones["base_contact"]) > torch.sum(env.termination_manager._term_dones["time_out"]) / 2:
+        if torch.sum(env.termination_manager._term_dones[:,1]) > torch.sum(env.termination_manager._term_dones[:, 0]) * 2:
             # obtain term settings
             term_cfg = env.event_manager.get_term_cfg('push_robot')
             # update term settings
