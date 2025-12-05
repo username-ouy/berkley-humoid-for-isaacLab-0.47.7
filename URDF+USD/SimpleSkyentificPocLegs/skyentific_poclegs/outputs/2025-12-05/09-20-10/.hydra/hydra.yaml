@@ -140,7 +140,7 @@ hydra:
     - path: ''
       schema: structured
       provider: schema
-    output_dir: /home/liuzhenfei/code/BipedalRobotSim/URDF+USD/SimpleSkyentificPocLegs/skyentific_poclegs/outputs/2025-11-12/16-41-09
+    output_dir: /home/liuzhenfei/code/BipedalRobotSim/URDF+USD/SimpleSkyentificPocLegs/skyentific_poclegs/outputs/2025-12-05/09-20-10
     choices:
       hydra/env: default
       hydra/callbacks: null

@@ -72,6 +72,7 @@ def main():
     # specify directory for logging experiments
     log_root_path = os.path.join("logs", "rsl_rl", agent_cfg.experiment_name)
     log_root_path = os.path.abspath(log_root_path)
+    
     print(f"[INFO] Loading experiment from directory: {log_root_path}")
     if args_cli.use_pretrained_checkpoint:
         resume_path = get_published_pretrained_checkpoint("rsl_rl", args_cli.task)
@@ -106,7 +107,7 @@ def main():
 
     # wrap around environment for rsl-rl
     env = RslRlVecEnvWrapper(env)
-
+    # resume_path = "/home/liuzhenfei/code/BipedalRobotSim/URDF+USD/SimpleSkyentificPocLegs/skyentific_poclegs/logs/rsl_rl/skyentific_poclegs_rough/2025-11-13_08-21-39/model_17200.pt"
     print(f"[INFO]: Loading model checkpoint from: {resume_path}")
     # load previously trained model
     ppo_runner = OnPolicyRunner(env, agent_cfg.to_dict(), log_dir=None, device=agent_cfg.device)

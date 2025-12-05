@@ -12,7 +12,7 @@ from skyentific_poclegs.assets import ISAAC_ASSET_DIR
 
 SKYENTIFIC_POCLEGS_CFG = ArticulationCfg(
     spawn=sim_utils.UsdFileCfg(
-        usd_path=f"{ISAAC_ASSET_DIR}/robots/poclegs.usd",
+        usd_path=f"/home/liuzhenfei/code/urdf/poclegs.usd", #  {ISAAC_ASSET_DIR}/robots/poclegs.usd
         activate_contact_sensors=True,
         rigid_props=sim_utils.RigidBodyPropertiesCfg(
             disable_gravity=False,

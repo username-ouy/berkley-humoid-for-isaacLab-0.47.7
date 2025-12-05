@@ -128,7 +128,7 @@ env:
         joint_drive_props: null
         visual_material_path: material
         visual_material: null
-        usd_path: /home/liuzhenfei/code/BipedalRobotSim/skyentific_poclegs/skyentific_poclegs/assets/robots/poclegs.usd
+        usd_path: /home/liuzhenfei/code/urdf/poclegs.usd
         variants: null
       init_state:
         pos:
