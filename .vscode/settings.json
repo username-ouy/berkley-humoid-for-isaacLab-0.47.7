@@ -1,0 +1,28 @@
+{
+    "python.analysis.enabled": true,
+    // 关键修正1：统一为实际使用的 conda 环境（berkeley_humanoid）
+    "python.pythonPath": "/home/liuzhenfei/miniconda3/envs/berkeley_humanoid/bin/python",
+    
+    // 关键修正2：extraPaths 指向 IsaacLab 包的源码根目录（source/isaaclab）
+    // 可编辑模式下，该目录是包的实际入口（包含 __init__.py），之前指向父目录也能识别，但精准指向更稳定
+    "python.analysis.extraPaths": [
+        "/home/liuzhenfei/code/IsaacLab/source/isaaclab",
+        // 可选：若 IsaacLab 依赖源码目录下的其他模块（如 ../tools），可补充
+        "/home/liuzhenfei/code/IsaacLab/source",
+        "/home/liuzhenfei/code/IsaacLab/source/isaaclab_tasks",
+        "/home/liuzhenfei/code/BipedalRobotSim/skyentific_poclegs",
+        "/home/liuzhenfei/code/IsaacLab/source/isaaclab_rl"
+    ],
+    "python.analysis.typeCheckingMode": "off",
+    "python.analysis.autoSearchPaths": true,
+    "python.analysis.useLibraryCodeForTypes": true,
+    // 优化：忽略编译产物、日志等无关目录，提升分析速度
+    "python.analysis.exclude": [
+        "/home/liuzhenfei/code/IsaacLab/build/**",
+        "/home/liuzhenfei/code/IsaacLab/logs/**",
+        "/home/liuzhenfei/code/IsaacLab/.git/**",
+        "/home/liuzhenfei/code/IsaacLab/source/isaaclab/tests/**"
+    ],
+    "python.analysis.followSymlinks": true,  // 支持符号链接（可编辑模式依赖）
+    "python.analysis.cacheFolder": "${workspaceFolder}/.vscode/pylance_cache"
+}

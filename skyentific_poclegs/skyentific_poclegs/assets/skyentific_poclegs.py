@@ -9,10 +9,22 @@ from isaaclab.assets.articulation import ArticulationCfg
 
 from skyentific_poclegs.assets import ISAAC_ASSET_DIR
 
+# 'left_hip_roll': 0.0,          # 原LL_HR
+# 'left_hip_yaw': -0.1745,       # 原LL_HAA
+# 'left_hip_pitch': -0.1745,     # 原LL_HFE
+# 'left_knee': 0.3491,           # 原LL_KFE
+# 'left_ankle_pitch': -0.1745,   # 原LL_FFE
+# 'left_ankle_roll': 0.0,        # 补充：default_joint_angles中存在
+# 'right_hip_roll': 0.0,         # 原LR_HR
+# 'right_hip_yaw': -0.1745,      # 原LR_HAA
+# 'right_hip_pitch': -0.1745,    # 原LR_HFE
+# 'right_knee': 0.3491,          # 原LR_KFE
+# 'right_ankle_pitch': -0.1745,  # 原LR_FFE
+# 'right_ankle_roll': 0.0,       # 补充：default_joint_angles中存在
 
 SKYENTIFIC_POCLEGS_CFG = ArticulationCfg(
     spawn=sim_utils.UsdFileCfg(
-        usd_path=f"/home/liuzhenfei/code/urdf/poclegs.usd", #  {ISAAC_ASSET_DIR}/robots/poclegs.usd
+        usd_path=f"{ISAAC_ASSET_DIR}/robots/poclegs.usd", #  {ISAAC_ASSET_DIR}/robots/poclegs.usd
         activate_contact_sensors=True,
         rigid_props=sim_utils.RigidBodyPropertiesCfg(
             disable_gravity=False,
@@ -28,23 +40,25 @@ SKYENTIFIC_POCLEGS_CFG = ArticulationCfg(
         ),
     ),
     init_state=ArticulationCfg.InitialStateCfg(
-        pos=(0.0, 0.0, 0.449),
+        pos=(0.0, 0.0, 0.75),
         joint_pos={
-            'LL_HR': 0.0,
-            'LR_HR': 0.0,
-            'LL_HAA': -0.1745,
-            'LR_HAA': -0.1745,
-            'LL_HFE': -0.1745,
-            'LR_HFE': -0.1745,
-            'LL_KFE': 0.3491,
-            'LR_KFE': 0.3491,
-            'LL_FFE': -0.1745,
-            'LR_FFE': -0.1745
+            'left_hip_roll': 0.0,          # 原LL_HR
+            'left_hip_yaw': 0.0,       # 原LL_HAA
+            'left_hip_pitch': 0.04,     # 原LL_HFE
+            'left_knee': 0.16,           # 原LL_KFE
+            'left_ankle_pitch': -0.11,   # 原LL_FFE
+            'left_ankle_roll': 0.0,        # 补充：default_joint_angles中存在
+            'right_hip_roll': 0.0,         # 原LR_HR
+            'right_hip_yaw': 0.0,      # 原LR_HAA
+            'right_hip_pitch': 0.04,    # 原LR_HFE
+            'right_knee': 0.16,          # 原LR_KFE
+            'right_ankle_pitch': -0.11,  # 原LR_FFE
+            'right_ankle_roll': 0.0,       # 补充：default_joint_angles中存在
         },
     ),
     actuators={
         "hr": DelayedPDActuatorCfg(
-            joint_names_expr=[".*HR"],
+            joint_names_expr=[".*hip_roll"],
             effort_limit=24.0,
             velocity_limit=23.0,
             stiffness=10.0,
@@ -55,7 +69,7 @@ SKYENTIFIC_POCLEGS_CFG = ArticulationCfg(
             max_delay=4,  # physics time steps (max: 2.0*4=8.0ms)
         ),
         "haa": DelayedPDActuatorCfg(
-            joint_names_expr=[".*HAA"],
+            joint_names_expr=[".*hip_yaw"],
             effort_limit=30.0,
             velocity_limit=15.0,
             stiffness=15.0,
@@ -66,7 +80,7 @@ SKYENTIFIC_POCLEGS_CFG = ArticulationCfg(
             max_delay=4,  # physics time steps (max: 2.0*4=8.0ms)
         ),
         "kfe": DelayedPDActuatorCfg(
-            joint_names_expr=[".*HFE", ".*KFE"],
+            joint_names_expr=[".*hip_pitch", ".*knee"],
             effort_limit=30.0,
             velocity_limit=20.0,
             stiffness=15.0,
@@ -77,7 +91,7 @@ SKYENTIFIC_POCLEGS_CFG = ArticulationCfg(
             max_delay=4,  # physics time steps (max: 2.0*4=8.0ms)
         ),
         "ffe": DelayedPDActuatorCfg(
-            joint_names_expr=[".*FFE"],
+            joint_names_expr=[".*ankle_pitch"],
             effort_limit=20.0,
             velocity_limit=23.0,
             stiffness=10.0,
@@ -86,6 +100,18 @@ SKYENTIFIC_POCLEGS_CFG = ArticulationCfg(
             friction=0.02,
             min_delay=0,  # physics time steps (min: 2.0*0=0.0ms)
             max_delay=4,  # physics time steps (max: 2.0*4=8.0ms)
+        ),
+        "ankle_roll": DelayedPDActuatorCfg(
+            # 新增：匹配所有*ankle_roll关节（default_joint_angles中的踝滚转）
+            joint_names_expr=[".*ankle_roll"],
+            effort_limit=20.0,
+            velocity_limit=23.0,
+            stiffness=10.0,
+            damping=1.5,
+            armature=6.9e-5 * 81,
+            friction=0.02,
+            min_delay=0,
+            max_delay=4,
         ),
     },
     soft_joint_pos_limit_factor=0.95,

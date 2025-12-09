@@ -93,12 +93,31 @@ class SkyentificObservationsCfg:
             noise=Unoise(n_min=-0.05, n_max=0.05),
         )
         velocity_commands = ObsTerm(func=mdp.generated_commands, params={"command_name": "base_velocity"})
-        hip_pos = ObsTerm(func=mdp.joint_pos_rel, noise=Unoise(n_min=-0.03, n_max=0.03),
-                          params={"asset_cfg": SceneEntityCfg("robot", joint_names=[".*HR"])})
-        kfe_pos = ObsTerm(func=mdp.joint_pos_rel, noise=Unoise(n_min=-0.05, n_max=0.05),
-                          params={"asset_cfg": SceneEntityCfg("robot", joint_names=[".*HAA", ".*HFE", ".*KFE"])})
-        ffe_pos = ObsTerm(func=mdp.joint_pos_rel, noise=Unoise(n_min=-0.08, n_max=0.08),
-                          params={"asset_cfg": SceneEntityCfg("robot", joint_names=[".*FFE"])}) 
+        hip_pos = ObsTerm(
+            func=mdp.joint_pos_rel,
+            noise=Unoise(n_min=-0.03, n_max=0.03),
+            params={"asset_cfg": SceneEntityCfg("robot", joint_names=[".*hip_roll"])}
+        )
+
+        # 原.*HAA/.*HFE/.*KFE → 匹配hip_yaw（髋偏航）+ hip_pitch（髋俯仰）+ knee（膝关节）
+        kfe_pos = ObsTerm(
+            func=mdp.joint_pos_rel,
+            noise=Unoise(n_min=-0.05, n_max=0.05),
+            params={"asset_cfg": SceneEntityCfg("robot", joint_names=[".*hip_yaw", ".*hip_pitch", ".*knee"])}
+        )
+
+        # 原.*FFE → 匹配所有ankle_pitch关节（踝俯仰）
+        ffe_pos = ObsTerm(
+            func=mdp.joint_pos_rel,
+            noise=Unoise(n_min=-0.08, n_max=0.08),
+            params={"asset_cfg": SceneEntityCfg("robot", joint_names=[".*ankle_pitch"])}
+        )
+        ankle_roll_pos = ObsTerm(
+            func=mdp.joint_pos_rel,
+            noise=Unoise(n_min=-0.03, n_max=0.03),
+            params={"asset_cfg": SceneEntityCfg("robot", joint_names=[".*ankle_roll"])}
+        )
+
         joint_vel = ObsTerm(func=mdp.joint_vel_rel, noise=Unoise(n_min=-1.5, n_max=1.5))
         actions = ObsTerm(func=mdp.last_action)
 
@@ -143,7 +162,7 @@ class SkyentificEventCfg:
     add_base_mass = EventTerm(
         func=mdp.randomize_rigid_body_mass,
         mode="startup",
-        params={"asset_cfg": SceneEntityCfg("robot", body_names="base"), "mass_distribution_params": (-1.0, 1.0),
+        params={"asset_cfg": SceneEntityCfg("robot", body_names="base_link"), "mass_distribution_params": (-1.0, 1.0),
                 "operation": "add"},
     )
 
@@ -166,7 +185,7 @@ class SkyentificEventCfg:
         func=mdp.apply_external_force_torque,
         mode="reset",
         params={
-            "asset_cfg": SceneEntityCfg("robot", body_names="base"),
+            "asset_cfg": SceneEntityCfg("robot", body_names="base_link"),
             "force_range": (0.0, 0.0),
             "torque_range": (-0.0, 0.0),
         },
@@ -221,38 +240,61 @@ class SkyentificRewardsCfg:
     ang_vel_xy_l2 = RewTerm(func=mdp.ang_vel_xy_l2, weight=-0.05)
     joint_torques_l2 = RewTerm(func=mdp.joint_torques_l2, weight=-1.0e-5)
     action_rate_l2 = RewTerm(func=mdp.action_rate_l2, weight=-0.01)
+    #腰高度过低惩罚
+    base_height_min = RewTerm(
+        func=mdp.base_height_l2,
+        weight=-5.0,
+        params={"target_height": 0.7},
+    )
+    # 修正后的奖励项配置（完全匹配实际连杆/关节名）
     feet_air_time = RewTerm(
         func=skyentific_mdp.feet_air_time,
         weight=2.0,
         params={
-            "sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*ffe"),
+            # .*ffe → .*ankle_pitch_link（匹配脚端连杆，对应Available strings中的名称）
+            "sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*ankle_pitch_link"),
             "command_name": "base_velocity",
             "threshold_min": 0.2,
             "threshold_max": 0.5,
         },
     )
+
     feet_slide = RewTerm(
         func=skyentific_mdp.feet_slide,
         weight=-0.25,
         params={
-            "sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*ffe"),
-            "asset_cfg": SceneEntityCfg("robot", body_names=".*ffe"),
+            # sensor_cfg匹配连杆，asset_cfg匹配关节
+            "sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*ankle_pitch_link"),
+            "asset_cfg": SceneEntityCfg("robot", body_names=".*ankle_pitch_link"),
         },
     )
+
     undesired_contacts = RewTerm(
         func=mdp.undesired_contacts,
         weight=-1.0,
-        params={"sensor_cfg": SceneEntityCfg("contact_forces", body_names=[".*hfe", ".*haa"]), "threshold": 1.0},
+        params={
+            # .*hfe/.*haa → .*hip_pitch_link/.*hip_yaw_link（匹配髋部连杆）
+            "sensor_cfg": SceneEntityCfg("contact_forces", body_names=[".*leg_pitch_link", ".*leg_yaw_link"]),
+            "threshold": 1.0,
+        },
     )
+
     joint_deviation_hip = RewTerm(
         func=mdp.joint_deviation_l1,
         weight=-0.1,
-        params={"asset_cfg": SceneEntityCfg("robot", joint_names=[".*HR", ".*HAA"])},
+        params={
+            # .*HR/.*HAA → .*hip_roll/.*hip_yaw（匹配髋滚转/偏航关节）
+            "asset_cfg": SceneEntityCfg("robot", joint_names=[".*hip_roll", ".*hip_yaw"]),
+        },
     )
+
     joint_deviation_knee = RewTerm(
         func=mdp.joint_deviation_l1,
         weight=-0.01,
-        params={"asset_cfg": SceneEntityCfg("robot", joint_names=[".*KFE"])},
+        params={
+            # .*KFE → .*knee（匹配膝关节）
+            "asset_cfg": SceneEntityCfg("robot", joint_names=[".*knee"]),
+        },
     )
     # -- optional penalties
     flat_orientation_l2 = RewTerm(func=mdp.flat_orientation_l2, weight=0.0)
@@ -279,7 +321,7 @@ class SkyentificTerminationsCfg:
     time_out = DoneTerm(func=mdp.time_out, time_out=True)
     base_contact = DoneTerm(
         func=mdp.illegal_contact,
-        params={"sensor_cfg": SceneEntityCfg("contact_forces", body_names="base"), "threshold": 1.0},
+        params={"sensor_cfg": SceneEntityCfg("contact_forces", body_names="base_link"), "threshold": 1.0},
     )
 
 @configclass
